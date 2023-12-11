@@ -23,8 +23,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/vapor/console-kit.git",
       "state" : {
-        "revision" : "2e3e205e8d7563d5c1a6f1c8992616d337f632e6",
-        "version" : "4.11.0"
+        "revision" : "a7dd7001196d39b758e4990ec0f26f80162f4c84",
+        "version" : "4.14.0"
       }
     },
     {
@@ -266,8 +266,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/vapor/vapor.git",
       "state" : {
-        "revision" : "d682e05fdb64c9f7da01af096a73cd11bb7ab755",
-        "version" : "4.86.2"
+        "revision" : "00c902ce53f8b00703e2edcd457400fef422c7fd",
+        "version" : "4.89.1"
       }
     },
     {
