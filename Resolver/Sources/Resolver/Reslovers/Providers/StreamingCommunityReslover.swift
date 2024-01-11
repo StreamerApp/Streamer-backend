@@ -13,7 +13,7 @@ struct StreamingCommunityResolver: Resolver {
 
         let pageContent = try await Utilities.downloadPage(url: url)
         let document = try SwiftSoup.parse(pageContent)
-        let path = try document.select("iframe").attr("src").removingPercentEncoding ?? ""
+        let path = try document.select("iframe").attr("src").removingPercentEncoding?.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
         // https://vixcloud.co/embed/183340
         let embedURL = try URL(path)
         let embedID = embedURL.lastPathComponent
