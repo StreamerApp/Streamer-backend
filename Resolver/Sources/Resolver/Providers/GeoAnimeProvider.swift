@@ -1,3 +1,4 @@
+
 import Foundation
 import SwiftSoup
 
@@ -12,15 +13,14 @@ public struct GeoAnimeProvider: Provider {
     public let baseURL: URL = URL(staticString: "https://genoanime.com")
     public var moviesURL: URL = URL(staticString: "https://genoanime.com/browse?genre=dubbed")
 
-    public var tvShowsURL: URL {
-        baseURL.appendingPathComponent("browse")
-    }
+    public var tvShowsURL: URL = URL(staticString: "https://genoanime.com/browse?sort=top_rated&")
+
 
     private var homeURL: URL {
         baseURL.appendingPathComponent("home")
     }
 
-    enum GogoAnimeHDProviderError: Error {
+    enum GeoAnimeProviderError: Error {
         case missingMovieInformation
         case episodeLinkNotFound
         case invalidURL
@@ -81,14 +81,15 @@ public struct GeoAnimeProvider: Provider {
     }
 
     public func fetchMovieDetails(for url: URL) async throws -> Movie {
-        throw GogoAnimeHDProviderError.missingMovieInformation
+        throw GeoAnimeProviderError.missingMovieInformation
     }
 
     public func fetchTVShowDetails(for url: URL) async throws -> TVshow {
         let pageContent = try await Utilities.downloadPage(url: url)
         let pageDocument = try SwiftSoup.parse(pageContent)
 
-        let title = try pageDocument.select("title").text()
+        // Extract title and poster URL
+        let title = try pageDocument.select("title").text().replacingOccurrences(of: "Episode List on Genoanime", with:  "").replacingOccurrences(of: "Watch", with: "")
         let posterPath = try pageDocument.select("meta[property=og:image]").attr("content")
         let posterURL = try URL(posterPath)
 
@@ -116,18 +117,19 @@ public struct GeoAnimeProvider: Provider {
     }
 
     public func search(keyword: String, page: Int) async throws -> [MediaContent] {
-        var components = URLComponents(url: baseURL.appendingPathComponent("search"), resolvingAgainstBaseURL: false)!
+        var components = URLComponents(url: URL(staticString: "https://genoanime.com/search"), resolvingAgainstBaseURL: false)!
         components.queryItems = [
-            URLQueryItem(name: "keyword", value: keyword),
-            URLQueryItem(name: "page", value: String(page))
+            URLQueryItem(name: "ani", value: keyword)
         ]
 
         guard let searchURL = components.url else {
-            throw GogoAnimeHDProviderError.invalidURL
+            throw GeoAnimeProviderError.invalidURL
         }
 
         return try await parsePage(url: searchURL)
     }
+
+     
 
     enum MediaType {
         case movie
