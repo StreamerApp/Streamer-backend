@@ -25,6 +25,7 @@ public struct AniwaveAnimeProvider: Provider {
     private var vrfSolverURL: URL
     enum GogoAnimeHDProviderError: Error {
         case missingMovieInformation
+        case invalidURL
     }
 
     public func parsePage(url: URL) async throws -> [MediaContent] {
@@ -67,48 +68,61 @@ public struct AniwaveAnimeProvider: Provider {
   
         
         
-        public func fetchTVShowDetails(for url: URL) async throws -> TVshow {
-            let pageContent = try await Utilities.downloadPage(url: url)
-            let pageDocument = try SwiftSoup.parse(pageContent)
-            let details = try pageDocument.select("div.poster")
-            let title = try pageDocument.select(".names").text()
-            let posterPath = try details.select("img").attr("src")
-            let posterURL = try URL(posterPath)
+    public func fetchTVShowDetails(for url: URL) async throws -> TVshow {
+        let pageContent = try await Utilities.downloadPage(url: url)
+        let pageDocument = try SwiftSoup.parse(pageContent)
+        let details = try pageDocument.select("div.poster")
+        let title = try pageDocument.select(".names").text()
+        let posterPath = try details.select("img").attr("src")
+        let posterURL = try URL(posterPath)
 
-            let dataId = try pageDocument.select("div.rating").attr("data-id")
-            let requestUrl = baseURL.appendingPathComponent("ajax/episode/list").appendingPathComponent(dataId)
-            //https://aniwave.to/ajax/episode/list/17818?vrf=HJ5fJJAZFz1HIlj_
-            let releaseDate = try pageDocument.select("[itemprop=dateCreated]").text()
-            let year = Int(releaseDate.components(separatedBy: " ").last ?? "2023")
+        let dataId = try pageDocument.select("div.rating").attr("data-id")
+        let requestUrl = baseURL.appendingPathComponent("ajax/episode/list").appendingPathComponent(dataId)
+        let releaseDate = try pageDocument.select("[itemprop=dateCreated]").text()
+        let year = Int(releaseDate.components(separatedBy: " ").last ?? "2023")
 
-            let vrf = try await encodeVrf(text: dataId)
-            let data = try await Utilities.requestData(url: requestUrl, parameters: ["vrf": vrf])
-            let content = try JSONDecoder().decode(Response.self, from: data)
-            let document = try SwiftSoup.parse(content.result)
-            let rows: Elements = try document.select(".ep-range")
-            let seasons = try rows.array().map { seasonDoc in
+        let vrf = try await encodeVrf(text: dataId)
 
-                let episodes = try seasonDoc.select("a").array().map { row in
-                    let epInfo = try row.attr("data-num")
-                    let episodeNumber = Int(epInfo) ?? 1
-                    let epDataId = try row.attr("data-ids")
-                    //https://aniwave.to/ajax/server/list/HTqbDcku?vrf=H0cJKRkXCGItF2EYJUAECt%3D%3D
-                    let sourceUrl = self.baseURL.appendingPathComponent("ajax/server/list").appendingPathComponent(epDataId)
-                    
-                    return Episode(number: episodeNumber, sources: [Source(hostURL: sourceUrl)])
+        let data = try await Utilities.requestData(url: requestUrl, parameters: ["vrf": vrf])
+        let content = try JSONDecoder().decode(Response.self, from: data)
+        let document = try SwiftSoup.parse(content.result)
+        let rows: Elements = try document.select(".ep-range")
+        let epDataId = try rows.select("a").attr("data-ids")
+        //moved the vrfServer before the  episodes in order for it to work
+        let vrfServer = try await encodeVrf(text: epDataId)
+
+        let seasons = try rows.array().map { seasonDoc in
+
+            let episodes = try seasonDoc.select("a").array().map { row in
+                let epInfo = try row.attr("data-num")
+                let episodeNumber = Int(epInfo) ?? 1
+                let epDataId = try row.attr("data-ids")
+
+                // Constructing source URL with VRF parameter
+                let sourceUrl = self.baseURL
+                    .appendingPathComponent("ajax/server/list")
+                    .appendingPathComponent(epDataId)
+                var components = URLComponents(url: sourceUrl, resolvingAgainstBaseURL: false)
+                components?.queryItems = [URLQueryItem(name: "vrf", value: vrfServer)]
+                guard let finalSourceUrl = components?.url else {
+                    throw GogoAnimeHDProviderError.invalidURL
                 }
 
-                let seasonInfo = try seasonDoc.attr("data-season")
-                let seasonNumber = Int(seasonInfo) ?? 1
-                let seasonURL = baseURL.appendingPathComponent(seasonNumber)
-                return Season(seasonNumber: seasonNumber, webURL: seasonURL, episodes: episodes)
+                return Episode(number: episodeNumber, sources: [Source(hostURL: finalSourceUrl)])
             }
 
-            return TVshow(title: title, webURL: url, posterURL: posterURL, year: year, seasons: seasons)
+            let seasonInfo = try seasonDoc.attr("data-season")
+            let seasonNumber = Int(seasonInfo) ?? 1
+            let seasonURL = baseURL.appendingPathComponent(seasonNumber)
+            return Season(seasonNumber: seasonNumber, webURL: seasonURL, episodes: episodes)
         }
 
-    
+        return TVshow(title: title, webURL: url, posterURL: posterURL, year: year, seasons: seasons)
+    }
 
+
+
+    
     public func search(keyword: String, page: Int) async throws -> [MediaContent] {
         let query = keyword.replacingOccurrences(of: " ", with: "+")
         let url = baseURL.appendingPathComponent("filter").appending("keyword", value: query)
