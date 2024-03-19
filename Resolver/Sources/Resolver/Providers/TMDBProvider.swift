@@ -26,6 +26,10 @@ public class TMDBProvider: Provider {
         .init(id: 386, name: "Peacock", poster: .init(staticString: "https://www.themoviedb.org/t/p/w300/gIAcGTjKKr0KOHL5s4O36roJ8p7.png")),
         .init(id: 520, name: "Discovery+", poster: .init(staticString: "https://www.themoviedb.org/t/p/w300/1D1bS3Dyw4ScYnFWTlBOvJXC3nb.png")),
         .init(id: 34, name: "MGM+", poster: .init(staticString: "https://www.themoviedb.org/t/p/w300/89TXvQzvoKvyqD9EEogohzMJ8D6.png")),
+        //anime providers//cartoon
+        .init(id: 283, name: "Crunchyroll", poster: .init(staticString: "https://www.themoviedb.org/t/p/w300/81QfupgVijSH5v1H3VUbdlPm2r8.png")),
+        .init(id: 318, name: "Adult Swim", poster: .init(staticString: "https://www.themoviedb.org/t/p/w300/tHZPHOLc6iF27G34cAZGPsMtMSy.png")),
+        .init(id: 34, name: "Boomerang", poster: .init(staticString: "https://www.themoviedb.org/t/p/w300/lkMfZclFXosrByxWf459NrXBiRY.png")),
     ]
     enum TMDBProvider: Error {
         case missingPoster
